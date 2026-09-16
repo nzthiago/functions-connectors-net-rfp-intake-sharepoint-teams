@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.38.33.27573",
-      "templateHash": "12080465063068224321"
+      "templateHash": "13387580032986660455"
     },
     "name": "RFP intake: SharePoint -> Document Intelligence -> Teams (.NET)",
     "description": "Connector Namespace trigger sample that reads an RFP from SharePoint, extracts its layout with Azure Document Intelligence, applies deterministic routing rules, and posts an Adaptive Card to Teams. System-key auth on the callback URL (no built-in auth)."
@@ -26730,12 +26730,33 @@
       },
       "value": "[reference('connectorNamespace').outputs.sharepointConnectionName.value]"
     },
+    "sharepointConnectionRuntimeUrl": {
+      "type": "string",
+      "metadata": {
+        "description": "Runtime URL for the SharePoint connection."
+      },
+      "value": "[reference('connectorNamespace').outputs.sharepointConnectionRuntimeUrl.value]"
+    },
     "teamsConnectionName": {
       "type": "string",
       "metadata": {
         "description": "The name of the created Teams connection on the Connector Namespace."
       },
       "value": "[reference('connectorNamespace').outputs.teamsConnectionName.value]"
+    },
+    "teamsConnectionRuntimeUrl": {
+      "type": "string",
+      "metadata": {
+        "description": "Runtime URL for the Teams connection."
+      },
+      "value": "[reference('connectorNamespace').outputs.teamsConnectionRuntimeUrl.value]"
+    },
+    "documentIntelligenceEndpoint": {
+      "type": "string",
+      "metadata": {
+        "description": "Endpoint for the Azure Document Intelligence account."
+      },
+      "value": "[reference('documentIntelligence').outputs.endpoint.value]"
     },
     "sharepointSiteUrl": {
       "type": "string",

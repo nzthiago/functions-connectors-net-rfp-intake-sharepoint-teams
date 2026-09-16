@@ -290,8 +290,17 @@ output connectorNamespaceName string = connectorNamespace.outputs.name
 @description('The name of the created SharePoint connection on the Connector Namespace.')
 output sharepointConnectionName string = connectorNamespace.outputs.sharepointConnectionName
 
+@description('Runtime URL for the SharePoint connection.')
+output sharepointConnectionRuntimeUrl string = connectorNamespace.outputs.sharepointConnectionRuntimeUrl
+
 @description('The name of the created Teams connection on the Connector Namespace.')
 output teamsConnectionName string = connectorNamespace.outputs.teamsConnectionName
+
+@description('Runtime URL for the Teams connection.')
+output teamsConnectionRuntimeUrl string = connectorNamespace.outputs.teamsConnectionRuntimeUrl
+
+@description('Endpoint for the Azure Document Intelligence account.')
+output documentIntelligenceEndpoint string = documentIntelligence.outputs.endpoint
 
 @description('SharePoint site URL that contains the RFP library.')
 output sharepointSiteUrl string = sharepointSiteUrl

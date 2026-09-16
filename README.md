@@ -21,12 +21,14 @@ and leverages the function app's managed identity for authentication.
 - [Azure CLI (`az`)](https://learn.microsoft.com/cli/azure/install-azure-cli) ≥
   2.75.0
 - [Azure Functions Core Tools](https://learn.microsoft.com/azure/azure-functions/functions-run-local?tabs=macos%2Cisolated-process%2Cnode-v4%2Cpython-v2%2Chttp-trigger%2Ccontainer-apps&pivots=programming-language-csharp#install-the-azure-functions-core-tools)
+  for local development.
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
 - [Azurite](https://learn.microsoft.com/azure/storage/common/storage-use-azurite)
   for local development.
 - [`jq`](https://jqlang.org/download/) (macOS and Linux only)
 - [`connector-namespace` Azure CLI extension](https://github.com/Azure/Connectors/tree/main/public-preview/connector-namespace-cli)
-- [Visual Studio Code](https://code.visualstudio.com/)
+- [Visual Studio Code](https://code.visualstudio.com/) for local development
+  with a dev tunnel.
 - A SharePoint site + document library to receive RFPs.
 - RFPs with a `Customer`, `Client`, or `Organization` field and a numbered
   `Required Capabilities` section. The included sample demonstrates the
@@ -39,35 +41,49 @@ and leverages the function app's managed identity for authentication.
   [Microsoft Teams connector documentation](https://learn.microsoft.com/connectors/teams/?tabs=text1%2Cdotnet)
   for details.
 
-## Provision resources
+## Deploy and test in Azure
 
 1. Clone the repo:
 
    ```pwsh
    git clone https://github.com/Azure-Samples/functions-connectors-net-rfp-intake-sharepoint-teams.git
+   cd functions-connectors-net-rfp-intake-sharepoint-teams
    ```
 
-2. Open a terminal and log in to Azure:
+2. Log in to Azure:
 
    ```pwsh
    azd auth login
    az login
    ```
 
-3. Inside the root directory, create an `azd` environment. This becomes the
-   resource group name:
+3. Inside the root directory, create an `azd` environment. Its name is used to
+   derive the resource group and resource names:
 
    ```pwsh
    azd env new rfp-demo
    ```
 
-4. Provision resources:
+4. If you don't know the Teams IDs, list the teams you have joined:
 
    ```pwsh
-   azd provision
+   az rest --method get --url "https://graph.microsoft.com/v1.0/me/joinedTeams" --query "value[].{name:displayName,teamId:id}" -o table
    ```
 
-   You get prompted for these values:
+   Then use the team ID to list its channels:
+
+   ```pwsh
+   az rest --method get --url "https://graph.microsoft.com/v1.0/teams/<team-id>/channels" --query "value[].{name:displayName,channelId:id}" -o table
+   ```
+
+5. Provision the resources, deploy the Function App, authorize both connector
+   connections, and configure the SharePoint trigger:
+
+   ```pwsh
+   azd up
+   ```
+
+   During the command, you are prompted for:
 
    - **Azure Subscription** (`00000000-0000-0000-0000-000000000000`):
      subscription where the resources will be provisioned.
@@ -83,94 +99,17 @@ and leverages the function app's managed identity for authentication.
    - **`TEAMS_CHANNEL_ID`** (`19:example-channel-id@thread.tacv2`):
      channel ID within the team that receives the summary card.
 
-After provisioning, the platform-specific `authorize-connections` script opens a
-browser to authenticate the SharePoint and Teams connections. For each
-authorization page, select **I have verified this request and trust the
-source**, then select **Allow access**. Connections that are already
-authenticated are skipped.
+   The platform-specific `authorize-connections` script opens a browser for
+   the SharePoint and Teams OAuth consent flows. On each page, select **I have
+   verified this request and trust the source**, then select **Allow access**.
+   Connections that are already authenticated are skipped. The post-provision
+   hook then generates `local.settings.json` for optional local development.
 
-To provision and deploy the complete application in one command, run `azd up`
-instead of running `azd provision` and `azd deploy` separately.
-
-## Test locally
-
-### Run the app locally
-
-1. Enter the required values in `local.settings.json`. The SharePoint and Teams
-   connection runtime URLs are available on their connection pages in the
-   Connector Namespace portal.
-
-   > **Note:** Leave `AZURE_CLIENT_ID` empty when running locally. This is
-   > referring to the managed identity client ID of the Function App and is only
-   > used when the app is running in Azure.
-
-   To find your Teams team ID, list the teams you have joined:
-
-   ```pwsh
-   az rest --method get --url "https://graph.microsoft.com/v1.0/me/joinedTeams" --query "value[].{name:displayName,teamId:id}" -o table
-   ```
-
-   Then use the team ID to list its channels:
-
-   ```pwsh
-   az rest --method get --url "https://graph.microsoft.com/v1.0/teams/<team-id>/channels" --query "value[].{name:displayName,channelId:id}" -o table
-   ```
-
-2. Start Azurite in a separate terminal:
-
-   ```pwsh
-   azurite --silent --location ~/.azurite/connectors-sample
-   ```
-
-3. Start the app with authentication enabled:
-
-   ```pwsh
-   func start --enableAuth
-   ```
-
-   > **Note:** Always use `--enableAuth` when exposing your app through a dev
-   > tunnel. Without it, your function endpoint is completely unauthenticated on
-   > the public internet.
-
-4. In VS Code, open the integrated terminal (**Control+Shift+\`** or
-   **Ctrl+Shift+\`**). Open the **Ports** view in the Panel region, then select
-   **Forward a Port**.
-5. Enter port `7071`. Port forwarding starts, and the **Ports** view displays a
-   **Forwarded Address**, such as `https://<id>-7071.uks1.devtunnels.ms`. If you
-   haven't previously signed in to GitHub from VS Code, complete the sign-in
-   prompt.
-6. Right-click port `7071`, then select **Port Visibility → Public**. Public
-   ports don't require sign-in. Select **Continue** in the confirmation dialog.
-7. Copy the **Forwarded Address**, then create the SharePoint trigger and point
-   it to your local Function host:
-
-   On macOS or Linux:
-
-   ```sh
-   sh ./infra/scripts/configure-trigger.sh \
-     --target local \
-     --callback-base-url "https://<id>-7071.uks1.devtunnels.ms"
-   ```
-
-   On Windows:
-
-   ```powershell
-   pwsh ./infra/scripts/configure-trigger.ps1 `
-     -Target Local `
-     -CallbackBaseUrl "https://<id>-7071.uks1.devtunnels.ms"
-   ```
-
-   The trigger polls the configured SharePoint library every five minutes and
-   sends new-file notifications through the public dev tunnel. Rerun this
-   command whenever the forwarded address changes.
-
-## Upload file
-
-1. Upload `sample-data/contoso-rfp.pdf` to the monitored SharePoint library.
+6. Upload `sample-data/contoso-rfp.pdf` to the monitored SharePoint library.
    Use a new file name if the sample was uploaded previously because the trigger
    listens for newly created files.
-2. The function runs within the trigger's polling interval (~5 min).
-3. A **"New RFP received"** Adaptive Card appears in your Teams channel:
+7. Allow up to five minutes for the SharePoint trigger to detect the file. A
+   **"New RFP received"** Adaptive Card appears in your Teams channel:
 
    ```text
    📄 New RFP received
@@ -198,7 +137,7 @@ instead of running `azd provision` and `azd deploy` separately.
    numbered capability headings and map them to SME roles. No generative model
    is used.
 
-### Run automated tests
+## Run automated tests
 
 Run the offline parser and SharePoint-content decoding tests:
 
@@ -206,36 +145,99 @@ Run the offline parser and SharePoint-content decoding tests:
 dotnet test tests/RfpApp.Tests/RfpApp.Tests.csproj --filter "Category!=Integration"
 ```
 
-To verify the included PDF against a live Document Intelligence account, sign
-in with `az login` and set the account endpoint. `azd provision` grants the
-provisioning identity the `Cognitive Services User` role. If you use a different
-account, grant that role before running the test.
+To verify the included PDF against the provisioned Document Intelligence
+account, sign in with `az login`. `azd provision` grants the provisioning
+identity the `Cognitive Services User` role.
 
 PowerShell:
 
 ```pwsh
-$env:DOCUMENT_INTELLIGENCE_ENDPOINT = "https://<resource>.cognitiveservices.azure.com/"
+$env:DOCUMENT_INTELLIGENCE_ENDPOINT = azd env get-value documentIntelligenceEndpoint
 dotnet test tests/RfpApp.Tests/RfpApp.Tests.csproj --filter "Category=Integration"
 ```
 
 macOS or Linux:
 
 ```sh
-export DOCUMENT_INTELLIGENCE_ENDPOINT="https://<resource>.cognitiveservices.azure.com/"
+export DOCUMENT_INTELLIGENCE_ENDPOINT="$(azd env get-value documentIntelligenceEndpoint)"
 dotnet test tests/RfpApp.Tests/RfpApp.Tests.csproj --filter "Category=Integration"
 ```
 
-## Deploy Function App to Azure
+If you test against a different account, set its endpoint manually and grant
+your identity the `Cognitive Services User` role first.
 
-1. Deploy the Function App:
+## Run locally
+
+Local execution still uses the connector connections and Document Intelligence
+account provisioned in Azure. If you haven't run `azd up`, run `azd provision`
+and complete both connector consent flows first.
+
+1. The post-provision hook creates `local.settings.json` from
+   `local.settings.example.json` and fills in the connector runtime URLs,
+   SharePoint site, Teams destination, and Document Intelligence endpoint. It
+   leaves `AZURE_CLIENT_ID` empty so `DefaultAzureCredential` uses your local
+   Azure sign-in instead of the Function App's managed identity.
+
+   To regenerate the file after changing environments or provisioning values,
+   run:
 
    ```pwsh
-   azd deploy
+   pwsh ./infra/scripts/createlocalsettings.ps1
    ```
 
-2. Upload a newly named file to the monitored SharePoint library.
+   On macOS or Linux:
 
-### What happens in the process
+   ```sh
+   sh ./infra/scripts/createlocalsettings.sh
+   ```
+
+2. Start Azurite in a separate terminal:
+
+   ```pwsh
+   azurite --silent --location ~/.azurite/connectors-sample
+   ```
+
+3. Start the app with authentication enabled:
+
+   ```pwsh
+   func start --enableAuth
+   ```
+
+   Always use `--enableAuth` when exposing the app through a dev tunnel.
+   Without it, the function endpoint is unauthenticated on the public internet.
+
+4. In VS Code, open the **Ports** view, select **Forward a Port**, and enter
+   `7071`.
+5. Copy the generated **Forwarded Address**, such as
+   `https://<id>-7071.uks1.devtunnels.ms`. Right-click port `7071`, select
+   **Port Visibility → Public**, and confirm the warning.
+6. Point the SharePoint trigger to the local Function host.
+
+   On macOS or Linux:
+
+   ```sh
+   sh ./infra/scripts/configure-trigger.sh \
+     --target local \
+     --callback-base-url "https://<id>-7071.uks1.devtunnels.ms"
+   ```
+
+   On Windows:
+
+   ```powershell
+   pwsh ./infra/scripts/configure-trigger.ps1 `
+     -Target Local `
+     -CallbackBaseUrl "https://<id>-7071.uks1.devtunnels.ms"
+   ```
+
+7. Upload a newly named copy of `sample-data/contoso-rfp.pdf` to SharePoint.
+   The trigger polls every five minutes and sends the callback through the
+   public dev tunnel. Rerun the configuration command whenever the forwarded
+   address changes.
+
+To return the trigger to the deployed Function App, run `azd deploy`. The
+`postdeploy` hook recreates the trigger with the Azure callback URL.
+
+## How the workflow works
 
 1. **RFP arrives.** A file is uploaded to the monitored SharePoint document
    library.
@@ -286,8 +288,12 @@ the Bicep deployment:
   waits for the SharePoint and Teams connections to become authenticated.
   Connections that are already authenticated are skipped. This script is
   needed because Bicep creates the connections, but a user must grant consent.
-  `azd provision` runs the platform-specific script through the
-  `postprovision` hook.
+- **`createlocalsettings.ps1` / `.sh`:** Generates the ignored
+  `local.settings.json` file from the committed example and the current azd
+  deployment outputs.
+- **`postprovision.ps1` / `.sh`:** Runs connector authorization and local
+  settings generation. `azd provision` invokes this platform-specific script
+  through the `postprovision` hook.
 - **`configure-trigger.ps1` / `.sh`:** Creates the SharePoint new-file trigger
   and points it to a local dev tunnel or the deployed Function App. It adds the
   `connector_extension` system key to the callback URL. This script runs after

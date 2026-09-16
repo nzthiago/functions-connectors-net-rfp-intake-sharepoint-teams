@@ -1,0 +1,49 @@
+#!/usr/bin/env sh
+
+set -eu
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "$script_dir/../.." && pwd)
+template_path="$repo_root/local.settings.example.json"
+settings_path="$repo_root/local.settings.json"
+temp_path="$settings_path.tmp"
+
+outputs=$(azd env get-values --output json)
+sharepoint_runtime_url=$(printf '%s' "$outputs" | jq -r '.sharepointConnectionRuntimeUrl // empty')
+sharepoint_site_url=$(printf '%s' "$outputs" | jq -r '.sharepointSiteUrl // .SHAREPOINT_SITE_URL // empty')
+teams_runtime_url=$(printf '%s' "$outputs" | jq -r '.teamsConnectionRuntimeUrl // empty')
+teams_team_id=$(printf '%s' "$outputs" | jq -r '.TEAMS_TEAM_ID // empty')
+teams_channel_id=$(printf '%s' "$outputs" | jq -r '.TEAMS_CHANNEL_ID // empty')
+document_intelligence_endpoint=$(printf '%s' "$outputs" | jq -r '.documentIntelligenceEndpoint // empty')
+
+if [ -z "$sharepoint_runtime_url" ] || [ -z "$sharepoint_site_url" ] ||
+   [ -z "$teams_runtime_url" ] || [ -z "$teams_team_id" ] ||
+   [ -z "$teams_channel_id" ] || [ -z "$document_intelligence_endpoint" ]; then
+    echo "Required azd outputs are missing. Run 'azd provision' first." >&2
+    exit 1
+fi
+
+trap 'rm -f "$temp_path"' EXIT
+
+jq \
+    --arg sharepoint_runtime_url "$sharepoint_runtime_url" \
+    --arg sharepoint_site_url "$sharepoint_site_url" \
+    --arg teams_runtime_url "$teams_runtime_url" \
+    --arg teams_team_id "$teams_team_id" \
+    --arg teams_channel_id "$teams_channel_id" \
+    --arg document_intelligence_endpoint "$document_intelligence_endpoint" \
+    '
+      .Values.AZURE_CLIENT_ID = ""
+      | .Values.SHAREPOINTONLINE_CONNECTION_RUNTIME_URL = $sharepoint_runtime_url
+      | .Values.SHAREPOINT_SITE_URL = $sharepoint_site_url
+      | .Values.TEAMS_CONNECTION_RUNTIME_URL = $teams_runtime_url
+      | .Values.TEAMS_TEAM_ID = $teams_team_id
+      | .Values.TEAMS_CHANNEL_ID = $teams_channel_id
+      | .Values.DOCUMENT_INTELLIGENCE_ENDPOINT = $document_intelligence_endpoint
+    ' \
+    "$template_path" > "$temp_path"
+
+mv "$temp_path" "$settings_path"
+trap - EXIT
+
+printf "Populated %s from azd deployment outputs.\n" "$settings_path"
