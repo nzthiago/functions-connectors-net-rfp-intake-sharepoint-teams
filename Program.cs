@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-using Azure.AI.DocumentIntelligence;
+using Azure.AI.ContentUnderstanding;
 using Azure.Connectors.Sdk.SharePointOnline;
 using Azure.Connectors.Sdk.Teams;
 using Azure.Identity;
@@ -41,9 +41,9 @@ var host = new HostBuilder()
         var teamsRuntimeUrl = RequireEnv("TEAMS_CONNECTION_RUNTIME_URL");
         services.AddSingleton(new TeamsClient(new Uri(teamsRuntimeUrl), credential));
 
-        // Document Intelligence client — extracts text and layout from PDF, Office, and image RFPs.
-        var documentIntelligenceEndpoint = RequireEnv("DOCUMENT_INTELLIGENCE_ENDPOINT");
-        services.AddSingleton(new DocumentIntelligenceClient(new Uri(documentIntelligenceEndpoint), credential));
+        // Content Understanding prebuilt-layout extracts text and layout without a generative model.
+        var contentUnderstandingEndpoint = RequireEnv("CONTENT_UNDERSTANDING_ENDPOINT");
+        services.AddSingleton(new ContentUnderstandingClient(new Uri(contentUnderstandingEndpoint), credential));
         services.AddSingleton<RfpDocumentAnalyzer>();
     })
     .Build();

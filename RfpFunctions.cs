@@ -16,7 +16,7 @@ namespace RfpApp;
 /// End-to-end RFP intake:
 ///   SharePoint "When a file is created (properties only)" trigger
 ///     -> SharePoint "Get file content" action (fetch the RFP document)
-///       -> Azure Document Intelligence (extract text and layout)
+///       -> Azure Content Understanding (extract text and layout)
 ///         -> deterministic RFP routing rules (identify capabilities and SMEs)
 ///         -> Teams "Post card in a chat or channel" action (notify the team).
 /// </summary>
@@ -76,7 +76,7 @@ public class RfpFunctions
                     continue;
                 }
 
-                // 2. Extract document structure with Document Intelligence and apply routing rules.
+                // 2. Extract document structure with Content Understanding and apply routing rules.
                 var analysis = await _documentAnalyzer.AnalyzeAsync(document, cancellationToken);
 
                 // 3. Post an Adaptive Card to the Teams channel.

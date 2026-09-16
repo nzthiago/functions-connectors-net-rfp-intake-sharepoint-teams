@@ -21,7 +21,7 @@ $requiredValues = @{
     teamsConnectionRuntimeUrl = $outputs.teamsConnectionRuntimeUrl
     teamsTeamId = $outputs.TEAMS_TEAM_ID
     teamsChannelId = $outputs.TEAMS_CHANNEL_ID
-    documentIntelligenceEndpoint = $outputs.documentIntelligenceEndpoint
+    contentUnderstandingEndpoint = $outputs.contentUnderstandingEndpoint
 }
 
 $missingValues = $requiredValues.GetEnumerator() |
@@ -39,7 +39,7 @@ $settings.Values.SHAREPOINT_SITE_URL = $requiredValues.sharepointSiteUrl
 $settings.Values.TEAMS_CONNECTION_RUNTIME_URL = $requiredValues.teamsConnectionRuntimeUrl
 $settings.Values.TEAMS_TEAM_ID = $requiredValues.teamsTeamId
 $settings.Values.TEAMS_CHANNEL_ID = $requiredValues.teamsChannelId
-$settings.Values.DOCUMENT_INTELLIGENCE_ENDPOINT = $requiredValues.documentIntelligenceEndpoint
+$settings.Values.CONTENT_UNDERSTANDING_ENDPOINT = $requiredValues.contentUnderstandingEndpoint
 
 $settings | ConvertTo-Json -Depth 10 | Set-Content $settingsPath -Encoding utf8
 Write-Host "Created $settingsPath from azd deployment outputs." -ForegroundColor Green

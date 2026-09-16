@@ -15,6 +15,6 @@
     "TEAMS_POST_AS": "Flow bot",
     "TEAMS_POST_IN": "Channel",
 
-    "DOCUMENT_INTELLIGENCE_ENDPOINT": "https://<your-document-intelligence-resource>.cognitiveservices.azure.com/"
+    "CONTENT_UNDERSTANDING_ENDPOINT": "https://<your-foundry-resource>.services.ai.azure.com/"
   }
 }

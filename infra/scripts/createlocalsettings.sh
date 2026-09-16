@@ -27,11 +27,11 @@ sharepoint_site_url=$(printf '%s' "$outputs" | jq -r '.sharepointSiteUrl // .SHA
 teams_runtime_url=$(printf '%s' "$outputs" | jq -r '.teamsConnectionRuntimeUrl // empty')
 teams_team_id=$(printf '%s' "$outputs" | jq -r '.TEAMS_TEAM_ID // empty')
 teams_channel_id=$(printf '%s' "$outputs" | jq -r '.TEAMS_CHANNEL_ID // empty')
-document_intelligence_endpoint=$(printf '%s' "$outputs" | jq -r '.documentIntelligenceEndpoint // empty')
+content_understanding_endpoint=$(printf '%s' "$outputs" | jq -r '.contentUnderstandingEndpoint // empty')
 
 if [ -z "$sharepoint_runtime_url" ] || [ -z "$sharepoint_site_url" ] ||
    [ -z "$teams_runtime_url" ] || [ -z "$teams_team_id" ] ||
-   [ -z "$teams_channel_id" ] || [ -z "$document_intelligence_endpoint" ]; then
+   [ -z "$teams_channel_id" ] || [ -z "$content_understanding_endpoint" ]; then
     echo "Required azd outputs are missing. Run 'azd provision' first." >&2
     exit 1
 fi
@@ -44,7 +44,7 @@ jq \
     --arg teams_runtime_url "$teams_runtime_url" \
     --arg teams_team_id "$teams_team_id" \
     --arg teams_channel_id "$teams_channel_id" \
-    --arg document_intelligence_endpoint "$document_intelligence_endpoint" \
+    --arg content_understanding_endpoint "$content_understanding_endpoint" \
     '
       .Values.AZURE_CLIENT_ID = ""
       | .Values.SHAREPOINTONLINE_CONNECTION_RUNTIME_URL = $sharepoint_runtime_url
@@ -52,7 +52,7 @@ jq \
       | .Values.TEAMS_CONNECTION_RUNTIME_URL = $teams_runtime_url
       | .Values.TEAMS_TEAM_ID = $teams_team_id
       | .Values.TEAMS_CHANNEL_ID = $teams_channel_id
-      | .Values.DOCUMENT_INTELLIGENCE_ENDPOINT = $document_intelligence_endpoint
+      | .Values.CONTENT_UNDERSTANDING_ENDPOINT = $content_understanding_endpoint
     ' \
     "$template_path" > "$temp_path"
 

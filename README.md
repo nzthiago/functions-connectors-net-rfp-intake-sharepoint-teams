@@ -1,9 +1,9 @@
-# Automated RFP Intake with SharePoint, Document Intelligence, and Teams
+# Automated RFP Intake with SharePoint, Content Understanding, and Teams
 
 > A customer submits an RFP document to a shared SharePoint library. An Azure
-> Function picks it up, Azure Document Intelligence extracts its text and
-> layout, deterministic routing rules identify the required capabilities, and a
-> summary card is posted to a Microsoft Teams channel.
+> Function picks it up, Azure Content Understanding in Foundry Tools extracts
+> its text and layout, deterministic routing rules identify the required
+> capabilities, and a summary card is posted to a Microsoft Teams channel.
 
 This .NET sample shows how to implement the scenario above using the
 [Azure Functions Connector extension](https://github.com/Azure/azure-functions-connector-extension)
@@ -88,7 +88,8 @@ and leverages the function app's managed identity for authentication.
    - **Azure Subscription** (`00000000-0000-0000-0000-000000000000`):
      subscription where the resources will be provisioned.
    - **Location** (`East US 2`): Azure region where resources will be
-     deployed. Choose a region that supports Azure Document Intelligence.
+     deployed. The deployment limits this prompt to regions supported by
+     Content Understanding.
    - **`SHAREPOINT_SITE_URL`**
      (`https://contoso.sharepoint.com/sites/RFPs`): SharePoint site that
      contains the document library to monitor.
@@ -131,11 +132,11 @@ and leverages the function app's managed identity for authentication.
    - Cloud Operations Specialist
    ```
 
-   The `prebuilt-layout` model supports PDF, image, Microsoft Office, and HTML
-   documents. Document Intelligence performs OCR and layout extraction; the
-   application then uses explicit, testable rules to parse the customer and
-   numbered capability headings and map them to SME roles. No generative model
-   is used.
+   The `prebuilt-layout` analyzer supports PDF, image, Microsoft Office, HTML,
+   email, and text-based documents. Content Understanding performs OCR and
+   layout extraction; the application then uses explicit, testable rules to
+   parse the customer and numbered capability headings and map them to SME
+   roles. This analyzer does not require a language or embedding model.
 
 ## Run automated tests
 
@@ -145,21 +146,21 @@ Run the offline parser and SharePoint-content decoding tests:
 dotnet test tests/RfpApp.Tests/RfpApp.Tests.csproj --filter "Category!=Integration"
 ```
 
-To verify the included PDF against the provisioned Document Intelligence
-account, sign in with `az login`. `azd provision` grants the provisioning
-identity the `Cognitive Services User` role.
+To verify the included PDF against the provisioned Microsoft Foundry resource,
+sign in with `az login`. `azd provision` grants the provisioning identity the
+`Cognitive Services User` role.
 
 PowerShell:
 
 ```pwsh
-$env:DOCUMENT_INTELLIGENCE_ENDPOINT = azd env get-value documentIntelligenceEndpoint
+$env:CONTENT_UNDERSTANDING_ENDPOINT = azd env get-value contentUnderstandingEndpoint
 dotnet test tests/RfpApp.Tests/RfpApp.Tests.csproj --filter "Category=Integration"
 ```
 
 macOS or Linux:
 
 ```sh
-export DOCUMENT_INTELLIGENCE_ENDPOINT="$(azd env get-value documentIntelligenceEndpoint)"
+export CONTENT_UNDERSTANDING_ENDPOINT="$(azd env get-value contentUnderstandingEndpoint)"
 dotnet test tests/RfpApp.Tests/RfpApp.Tests.csproj --filter "Category=Integration"
 ```
 
@@ -168,13 +169,13 @@ your identity the `Cognitive Services User` role first.
 
 ## Run locally
 
-Local execution still uses the connector connections and Document Intelligence
-account provisioned in Azure. If you haven't run `azd up`, run `azd provision`
+Local execution still uses the connector connections and Content Understanding
+resource provisioned in Azure. If you haven't run `azd up`, run `azd provision`
 and complete both connector consent flows first.
 
 1. The post-provision hook creates `local.settings.json` from
    `local.settings.example.json` and fills in the connector runtime URLs,
-   SharePoint site, Teams destination, and Document Intelligence endpoint. It
+   SharePoint site, Teams destination, and Content Understanding endpoint. It
    leaves `AZURE_CLIENT_ID` empty so `DefaultAzureCredential` uses your local
    Azure sign-in instead of the Function App's managed identity.
 
@@ -249,9 +250,9 @@ To return the trigger to the deployed Function App, run `azd deploy`. The
    action (`SharePointOnlineClient.GetFileContentAsync`) with the file
    identifier from the trigger payload and decodes the connector's JSON Base64
    binary response into the original document bytes.
-4. **Extract the document.** The original file bytes are sent to Azure Document
-   Intelligence's `prebuilt-layout` model, which returns OCR text and document
-   structure.
+4. **Extract the document.** The original file bytes are sent to Content
+   Understanding's `prebuilt-layout` analyzer, which returns OCR text and
+   document structure without invoking a generative model.
 5. **Route the RFP.** The function parses the customer and numbered headings in
    the `Required Capabilities` section, then maps recognized capability terms
    to SME roles with deterministic routing rules.
@@ -261,13 +262,14 @@ To return the trigger to the deployed Function App, run `azd deploy`. The
 
 ## Upgrade or clean up
 
-If you previously provisioned this sample's Azure OpenAI-based version into the
-same azd environment, incremental ARM deployment retains that unused Cognitive
-Services account. After the Document Intelligence workflow is deployed and
-verified, list the legacy account:
+If you previously provisioned an Azure OpenAI or standalone Document
+Intelligence version of this sample into the same azd environment, incremental
+ARM deployment retains those unused Cognitive Services accounts. After the
+Content Understanding workflow is deployed and verified, list the legacy
+accounts:
 
 ```pwsh
-az cognitiveservices account list --resource-group "$(azd env get-value resourceGroupName)" --query "[?kind=='OpenAI'].name" -o tsv
+az cognitiveservices account list --resource-group "$(azd env get-value resourceGroupName)" --query "[?kind=='OpenAI' || kind=='FormRecognizer'].{name:name,kind:kind}" -o table
 ```
 
 If the command returns an account, confirm that no other application uses it,
@@ -286,12 +288,12 @@ azd down --purge
 ## How auth works (no secrets)
 
 - **Function-app user-assigned managed identity:** Calls the SharePoint and
-  Teams connection runtime URLs and Azure Document Intelligence. It has an
+  Teams connection runtime URLs and Azure Content Understanding. It has an
   access policy on each connection and the `Cognitive Services User` role on
-  the Document Intelligence account.
+  the Microsoft Foundry resource.
 - **Application Insights:** The Function worker uses the same managed identity
   to export OpenTelemetry. Local authentication is disabled on the Application
-  Insights and Document Intelligence resources.
+  Insights and Microsoft Foundry resources.
 - **Connector Namespace system managed identity:** Polls the SharePoint
   trigger and delivers callbacks.
 - **Callback authorization:** Uses the `connector_extension` system key on the
@@ -343,7 +345,7 @@ following:
   destination team and channel. Private channels are supported when that user
   is a channel member.
 - Confirm the uploaded file is in a
-  [format supported by the `prebuilt-layout` model](https://learn.microsoft.com/azure/ai-services/document-intelligence/prebuilt/layout?view=doc-intel-4.0.0#input-requirements).
+  [format supported by Content Understanding](https://learn.microsoft.com/azure/ai-services/content-understanding/service-limits#input-file-limits).
 - Confirm the RFP contains a numbered `Required Capabilities` section. The
   deterministic parser intentionally returns empty capability and SME lists
   rather than inventing requirements that are not present.
@@ -354,5 +356,7 @@ following:
   — the trigger binding used here.
 - [Azure Connectors .NET SDK](https://github.com/Azure/Connectors-NET-SDK) —
   typed clients for SharePoint, Teams, and other connectors.
-- [Azure Document Intelligence layout model](https://learn.microsoft.com/azure/ai-services/document-intelligence/prebuilt/layout?view=doc-intel-4.0.0)
-  — OCR and layout extraction used by this sample.
+- [Azure Content Understanding `prebuilt-layout` analyzer](https://learn.microsoft.com/azure/ai-services/content-understanding/concepts/prebuilt-analyzers#prebuilt-layout)
+  — non-generative OCR and layout extraction used by this sample.
+- [Content Understanding region support](https://learn.microsoft.com/azure/ai-services/content-understanding/language-region-support)
+  — regions available for the Microsoft Foundry resource.

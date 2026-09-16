@@ -64,6 +64,32 @@ public class RfpAnalysisParserTests
     }
 
     [Fact]
+    public void Parse_HandlesContentUnderstandingHtmlTables()
+    {
+        const string content = """
+            # Request for proposal
+
+            <table>
+            <tr>
+            <td>Customer:</td>
+            <td>Contoso Ltd.</td>
+            </tr>
+            </table>
+
+            ## 3. Scope & Required Capabilities
+            ### 3.1 Azure AI
+            ### 3.2 Data Platform
+            ## 4. Deliverables
+            """;
+
+        RfpAnalysis result = RfpAnalysisParser.Parse(content);
+
+        Assert.Equal("Contoso Ltd.", result.Customer);
+        Assert.Equal(["Azure AI", "Data Platform"], result.RequiredCapabilities);
+        Assert.Equal(["AI Specialist", "Data Platform Engineer"], result.RecommendedSmes);
+    }
+
+    [Fact]
     public void Parse_HandlesLabelAndValueOnSeparateOcrLines()
     {
         const string content = """

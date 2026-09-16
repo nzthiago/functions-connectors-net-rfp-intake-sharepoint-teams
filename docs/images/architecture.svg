@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="430" viewBox="0 0 1200 430" role="img" aria-labelledby="title desc">
   <title id="title">RFP intake architecture</title>
-  <desc id="desc">SharePoint sends a new RFP through a connector to an Azure Function. The function uses Azure Document Intelligence and posts an Adaptive Card through a Teams connector.</desc>
+  <desc id="desc">SharePoint sends a new RFP through a connector to an Azure Function. The function uses Azure Content Understanding and posts an Adaptive Card through a Teams connector.</desc>
   <defs>
     <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
       <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#172b4d" flood-opacity="0.14"/>
@@ -49,7 +49,7 @@
 
   <rect class="node" x="850" y="55" width="200" height="140" rx="16"/>
   <image x="922" y="75" width="56" height="56" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOCAxOCIgd2lkdGg9IjU2IiBoZWlnaHQ9IjU2Ij48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImEiIHgxPSI5IiB5MT0iMTkuMTMiIHgyPSI5IiB5Mj0iLS4yOSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iIzAwNzhkNCIvPjxzdG9wIG9mZnNldD0iLjE2IiBzdG9wLWNvbG9yPSIjMTM4MGRhIi8+PHN0b3Agb2Zmc2V0PSIuNTMiIHN0b3AtY29sb3I9IiMzYzkxZTUiLz48c3RvcCBvZmZzZXQ9Ii44MiIgc3RvcC1jb2xvcj0iIzU1OWNlYyIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzVlYTBlZiIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxwYXRoIGQ9Ik0xOCAxMS4zOGE0IDQgMCAwMC0zLjUxLTMuODggNS4xIDUuMSAwIDAwLTUuMjUtNC44OEE1LjI1IDUuMjUgMCAwMDQuMjIgNiA0LjggNC44IDAgMDAwIDEwLjY3YTQuOSA0LjkgMCAwMDUuMDcgNC43MWg4LjY1YS43OC43OCAwIDAwLjIyIDAgNC4xIDQuMSAwIDAwNC4wNi00eiIgZmlsbD0idXJsKCNhKSIvPjxwYXRoIGQ9Ik01LjQyIDEwLjM5aC0uODhhMS4wOSAxLjA5IDAgMTAwIC40OWguODhhLjIuMiAwIDAxLjIuMnY0LjNoLjQ5di00LjNhLjY5LjY5IDAgMDAtLjY5LS42OXptLTEuOTUuODhhLjY0LjY0IDAgMTEuNjQtLjY0LjY0LjY0IDAgMDEtLjY0LjY0eiIgZmlsbD0iIzljZWJmZiIvPjxwYXRoIGQ9Ik04Ljk0IDEwLjYxdi0xYS43LjcgMCAwMC0uNy0uN0g2LjY5YS4yLjIgMCAwMS0uMi0uMlYzLjRsLS4yMy4xMi0uMjYuMTR2NWEuNjkuNjkgMCAwMC42OS42OWgxLjU1YS4yMS4yMSAwIDAxLjIxLjIxdjFhMS4wOCAxLjA4IDAgMDAtLjg1IDEuMDYgMS4wOSAxLjA5IDAgMTAxLjM0LTEuMDZ6bS0uMjUgMS43YS42NC42NCAwIDExLjY0LS42NC42NC42NCAwIDAxLS42NC42NHoiIGZpbGw9IiNmMmYyZjIiLz48cGF0aCBkPSJNMTQuNTMgOC41YTEuMDkgMS4wOSAwIDAwLS4yNSAyLjE1di4yYS4yMS4yMSAwIDAxLS4yMS4yMWgtMlY3LjU0YS42OS42OSAwIDAwLS42OS0uNjloLTEuMDNBMS4wOCAxLjA4IDAgMDA5LjI5IDZhMS4wOSAxLjA5IDAgMTAxLjA2IDEuMzRoMS4wN2EuMi4yIDAgMDEuMi4ydjcuODRoLjQ5di0zLjgzaDJhLjcuNyAwIDAwLjctLjd2LS4yYTEuMDkgMS4wOSAwIDAwLjg1LTEuMDYgMS4wOSAxLjA5IDAgMDAtMS4xMy0xLjA5em0tNS4yNC0uNzdhLjY0LjY0IDAgMTEuNjQtLjY0LjY0LjY0IDAgMDEtLjY0LjY0em01LjI0IDIuNWEuNjQuNjQgMCAxMS42My0uNjQuNjQuNjQgMCAwMS0uNjMuNjR6IiBmaWxsPSIjOWNlYmZmIi8+PC9zdmc+"/>
-  <text class="title" x="950" y="153" text-anchor="middle">Document Intelligence</text>
+  <text class="title" x="950" y="153" text-anchor="middle">Content Understanding</text>
   <text class="subtitle" x="950" y="174" text-anchor="middle">prebuilt-layout</text>
 
   <rect class="node" x="850" y="245" width="200" height="140" rx="16"/>

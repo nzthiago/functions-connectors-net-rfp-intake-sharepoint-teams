@@ -1,4 +1,4 @@
-@description('Name of the Azure Document Intelligence account.')
+@description('Name of the Microsoft Foundry resource used by Content Understanding.')
 param name string
 param location string
 param tags object = {}
@@ -16,7 +16,7 @@ resource account 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
   name: name
   location: location
   tags: tags
-  kind: 'FormRecognizer'
+  kind: 'AIServices'
   sku: {
     name: 'S0'
   }
@@ -27,7 +27,7 @@ resource account 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
   }
 }
 
-resource functionAppDocumentIntelligenceRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource functionAppContentUnderstandingRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: account
   name: guid(account.id, functionAppPrincipalId, cognitiveServicesUserRoleId)
   properties: {
@@ -37,7 +37,7 @@ resource functionAppDocumentIntelligenceRole 'Microsoft.Authorization/roleAssign
   }
 }
 
-resource userDocumentIntelligenceRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(userPrincipalId)) {
+resource userContentUnderstandingRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(userPrincipalId)) {
   scope: account
   name: guid(account.id, userPrincipalId, cognitiveServicesUserRoleId)
   properties: {
@@ -47,5 +47,5 @@ resource userDocumentIntelligenceRole 'Microsoft.Authorization/roleAssignments@2
   }
 }
 
-@description('The endpoint of the Azure Document Intelligence account.')
+@description('The endpoint of the Microsoft Foundry resource.')
 output endpoint string = account.properties.endpoint

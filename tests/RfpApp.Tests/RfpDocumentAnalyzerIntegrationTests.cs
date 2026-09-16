@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-using Azure.AI.DocumentIntelligence;
+using Azure.AI.ContentUnderstanding;
 using Azure.Identity;
 using RfpApp;
 using Xunit;
@@ -14,13 +14,13 @@ public class RfpDocumentAnalyzerIntegrationTests
     [Trait("Category", "Integration")]
     public async Task AnalyzeAsync_ExtractsTheSamplePdf()
     {
-        string? endpoint = Environment.GetEnvironmentVariable("DOCUMENT_INTELLIGENCE_ENDPOINT");
+        string? endpoint = Environment.GetEnvironmentVariable("CONTENT_UNDERSTANDING_ENDPOINT");
         if (string.IsNullOrWhiteSpace(endpoint))
         {
-            Assert.Skip("Set DOCUMENT_INTELLIGENCE_ENDPOINT to run the live integration test.");
+            Assert.Skip("Set CONTENT_UNDERSTANDING_ENDPOINT to run the live integration test.");
         }
 
-        var client = new DocumentIntelligenceClient(
+        var client = new ContentUnderstandingClient(
             new Uri(endpoint),
             new DefaultAzureCredential());
         var analyzer = new RfpDocumentAnalyzer(client);

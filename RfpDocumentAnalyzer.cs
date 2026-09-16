@@ -3,16 +3,16 @@
 
 using System.Text.RegularExpressions;
 using Azure;
-using Azure.AI.DocumentIntelligence;
+using Azure.AI.ContentUnderstanding;
 
 namespace RfpApp;
 
 public sealed class RfpDocumentAnalyzer
 {
-    private const string LayoutModelId = "prebuilt-layout";
-    private readonly DocumentIntelligenceClient _client;
+    private const string LayoutAnalyzerId = "prebuilt-layout";
+    private readonly ContentUnderstandingClient _client;
 
-    public RfpDocumentAnalyzer(DocumentIntelligenceClient client)
+    public RfpDocumentAnalyzer(ContentUnderstandingClient client)
     {
         _client = client;
     }
@@ -21,13 +21,14 @@ public sealed class RfpDocumentAnalyzer
     {
         ArgumentNullException.ThrowIfNull(document);
 
-        Operation<AnalyzeResult> operation = await _client.AnalyzeDocumentAsync(
+        Operation<AnalysisResult> operation = await _client.AnalyzeBinaryAsync(
             WaitUntil.Completed,
-            LayoutModelId,
+            LayoutAnalyzerId,
             BinaryData.FromBytes(document),
             cancellationToken: cancellationToken);
 
-        return RfpAnalysisParser.Parse(operation.Value.Content);
+        string? markdown = operation.Value.Contents?.FirstOrDefault()?.Markdown;
+        return RfpAnalysisParser.Parse(markdown);
     }
 }
 
@@ -50,7 +51,7 @@ public static partial class RfpAnalysisParser
             return new RfpAnalysis { Customer = "Unknown customer" };
         }
 
-        string[] lines = content
+        string[] lines = NormalizeContent(content)
             .Replace("\r\n", "\n", StringComparison.Ordinal)
             .Split('\n', StringSplitOptions.TrimEntries);
 
@@ -183,6 +184,25 @@ public static partial class RfpAnalysisParser
             .Trim();
     }
 
+    private static string NormalizeContent(string content)
+    {
+        string normalized = HtmlTableRowRegex().Replace(
+            content,
+            static match =>
+            {
+                string label = CleanHtmlCell(match.Groups["label"].Value);
+                string value = CleanHtmlCell(match.Groups["value"].Value);
+                return $"{label} {value}";
+            });
+
+        return HtmlTableTagRegex().Replace(normalized, "\n");
+    }
+
+    private static string CleanHtmlCell(string value)
+    {
+        return System.Net.WebUtility.HtmlDecode(HtmlTagRegex().Replace(value, string.Empty)).Trim();
+    }
+
     [GeneratedRegex(
         @"^\s*(?:#{1,6}\s*)?(?:customer|client|organization)\s*[:\-]\s*(?<value>.*?)\s*$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
@@ -202,4 +222,19 @@ public static partial class RfpAnalysisParser
         @"^\s*(?:#{1,6}\s*)?\d+\.\d+(?:\.\d+)?[.)]?\s+(?<value>[^:]+?)\s*:?\s*$",
         RegexOptions.CultureInvariant)]
     private static partial Regex CapabilityHeadingRegex();
+
+    [GeneratedRegex(
+        @"<tr\b[^>]*>\s*<t[dh]\b[^>]*>(?<label>.*?)</t[dh]>\s*<t[dh]\b[^>]*>(?<value>.*?)</t[dh]>\s*</tr>",
+        RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.CultureInvariant)]
+    private static partial Regex HtmlTableRowRegex();
+
+    [GeneratedRegex(
+        @"</?(?:table|thead|tbody|tfoot|tr|td|th)\b[^>]*>",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex HtmlTableTagRegex();
+
+    [GeneratedRegex(
+        @"<[^>]+>",
+        RegexOptions.CultureInvariant)]
+    private static partial Regex HtmlTagRegex();
 }

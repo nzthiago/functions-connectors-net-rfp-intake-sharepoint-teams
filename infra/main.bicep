@@ -10,13 +10,26 @@ param environmentName string
     type: 'location'
   }
 })
-@description('Location for all resources.')
+@allowed([
+  'australiaeast'
+  'eastus'
+  'eastus2'
+  'japaneast'
+  'southcentralus'
+  'southeastasia'
+  'swedencentral'
+  'uksouth'
+  'westeurope'
+  'westus'
+  'westus3'
+])
+@description('Location for all resources. Must support Azure Content Understanding.')
 param location string
 
-metadata name = 'RFP intake: SharePoint -> Document Intelligence -> Teams (.NET)'
-metadata description = 'Connector Namespace trigger sample that reads an RFP from SharePoint, extracts its layout with Azure Document Intelligence, applies deterministic routing rules, and posts an Adaptive Card to Teams. System-key auth on the callback URL (no built-in auth).'
+metadata name = 'RFP intake: SharePoint -> Content Understanding -> Teams (.NET)'
+metadata description = 'Connector Namespace trigger sample that reads an RFP from SharePoint, extracts its layout with Azure Content Understanding, applies deterministic routing rules, and posts an Adaptive Card to Teams. System-key auth on the callback URL (no built-in auth).'
 
-@description('Id of the user identity to be used for testing and debugging. Granted access to the connections + Document Intelligence so the same code can be debugged locally with `az login`.')
+@description('Id of the user identity to be used for testing and debugging. Granted access to the connections + Content Understanding so the same code can be debugged locally with `az login`.')
 @metadata({
   azd: {
     type: 'principalId'
@@ -55,7 +68,7 @@ var sharepointConnectionName = '${abbrs.connectorNamespacesConnections}sp-${reso
 var teamsConnectionName = '${abbrs.connectorNamespacesConnections}teams-${resourceToken}'
 // Keep a service discriminator to prevent unsupported in-place account kind
 // changes when upgrading existing Cognitive Services environments.
-var documentIntelligenceName = '${abbrs.cognitiveServicesAccounts}di-${resourceToken}'
+var contentUnderstandingName = '${abbrs.cognitiveServicesAccounts}cu-${resourceToken}'
 
 var deploymentStorageContainerName = 'app-package-${take(functionAppName, 32)}-${take(toLower(uniqueString(functionAppName, environmentName)), 7)}'
 var storageBlobDataOwner = 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b'
@@ -195,12 +208,12 @@ module connectorNamespace './connectorNamespace.bicep' = {
   }
 }
 
-// Azure Document Intelligence account + role assignments.
-module documentIntelligence './documentIntelligence.bicep' = {
+// Microsoft Foundry resource for Content Understanding + role assignments.
+module contentUnderstanding './contentUnderstanding.bicep' = {
   scope: rg
-  name: documentIntelligenceName
+  name: contentUnderstandingName
   params: {
-    name: documentIntelligenceName
+    name: contentUnderstandingName
     location: location
     tags: tags
     functionAppPrincipalId: funcUserAssignedIdentity.outputs.principalId
@@ -222,7 +235,7 @@ var allAppSettings = {
   TEAMS_CHANNEL_ID: teamsChannelId
   TEAMS_POST_AS: 'Flow bot'
   TEAMS_POST_IN: 'Channel'
-  DOCUMENT_INTELLIGENCE_ENDPOINT: documentIntelligence.outputs.endpoint
+  CONTENT_UNDERSTANDING_ENDPOINT: contentUnderstanding.outputs.endpoint
 }
 
 module functionApp 'br/public:avm/res/web/site:0.22.0' = {
@@ -299,8 +312,8 @@ output teamsConnectionName string = connectorNamespace.outputs.teamsConnectionNa
 @description('Runtime URL for the Teams connection.')
 output teamsConnectionRuntimeUrl string = connectorNamespace.outputs.teamsConnectionRuntimeUrl
 
-@description('Endpoint for the Azure Document Intelligence account.')
-output documentIntelligenceEndpoint string = documentIntelligence.outputs.endpoint
+@description('Endpoint for the Microsoft Foundry resource used by Content Understanding.')
+output contentUnderstandingEndpoint string = contentUnderstanding.outputs.endpoint
 
 @description('SharePoint site URL that contains the RFP library.')
 output sharepointSiteUrl string = sharepointSiteUrl
