@@ -1,9 +1,18 @@
+param(
+    [switch]$Force
+)
+
 $ErrorActionPreference = 'Stop'
 
 $scriptDirectory = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = Resolve-Path (Join-Path $scriptDirectory '../..')
 $templatePath = Join-Path $repoRoot 'local.settings.example.json'
 $settingsPath = Join-Path $repoRoot 'local.settings.json'
+
+if ((Test-Path $settingsPath) -and -not $Force) {
+    Write-Host "$settingsPath already exists; leaving it unchanged." -ForegroundColor Yellow
+    return
+}
 
 $outputs = azd env get-values --output json | ConvertFrom-Json
 $requiredValues = @{
@@ -33,4 +42,4 @@ $settings.Values.TEAMS_CHANNEL_ID = $requiredValues.teamsChannelId
 $settings.Values.DOCUMENT_INTELLIGENCE_ENDPOINT = $requiredValues.documentIntelligenceEndpoint
 
 $settings | ConvertTo-Json -Depth 10 | Set-Content $settingsPath -Encoding utf8
-Write-Host "Populated $settingsPath from azd deployment outputs." -ForegroundColor Green
+Write-Host "Created $settingsPath from azd deployment outputs." -ForegroundColor Green

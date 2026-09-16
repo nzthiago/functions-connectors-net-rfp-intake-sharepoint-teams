@@ -182,13 +182,13 @@ and complete both connector consent flows first.
    run:
 
    ```pwsh
-   pwsh ./infra/scripts/createlocalsettings.ps1
+   pwsh ./infra/scripts/createlocalsettings.ps1 -Force
    ```
 
    On macOS or Linux:
 
    ```sh
-   sh ./infra/scripts/createlocalsettings.sh
+   sh ./infra/scripts/createlocalsettings.sh --force
    ```
 
 2. Start Azurite in a separate terminal:
@@ -290,7 +290,7 @@ the Bicep deployment:
   needed because Bicep creates the connections, but a user must grant consent.
 - **`createlocalsettings.ps1` / `.sh`:** Generates the ignored
   `local.settings.json` file from the committed example and the current azd
-  deployment outputs.
+  deployment outputs. It preserves an existing file unless explicitly forced.
 - **`postprovision.ps1` / `.sh`:** Runs connector authorization and local
   settings generation. `azd provision` invokes this platform-specific script
   through the `postprovision` hook.

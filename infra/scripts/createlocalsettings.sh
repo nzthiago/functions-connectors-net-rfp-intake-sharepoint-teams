@@ -2,11 +2,24 @@
 
 set -eu
 
+force=false
+if [ "${1:-}" = "--force" ]; then
+    force=true
+elif [ "$#" -gt 0 ]; then
+    echo "Usage: $0 [--force]" >&2
+    exit 2
+fi
+
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repo_root=$(CDPATH= cd -- "$script_dir/../.." && pwd)
 template_path="$repo_root/local.settings.example.json"
 settings_path="$repo_root/local.settings.json"
 temp_path="$settings_path.tmp"
+
+if [ -f "$settings_path" ] && [ "$force" = false ]; then
+    printf "%s already exists; leaving it unchanged.\n" "$settings_path"
+    exit 0
+fi
 
 outputs=$(azd env get-values --output json)
 sharepoint_runtime_url=$(printf '%s' "$outputs" | jq -r '.sharepointConnectionRuntimeUrl // empty')
@@ -46,4 +59,4 @@ jq \
 mv "$temp_path" "$settings_path"
 trap - EXIT
 
-printf "Populated %s from azd deployment outputs.\n" "$settings_path"
+printf "Created %s from azd deployment outputs.\n" "$settings_path"
