@@ -259,7 +259,25 @@ To return the trigger to the deployed Function App, run `azd deploy`. The
    channel with the **"Post card in a chat or channel"** action
    (`TeamsClient.PostCardToConversationAsync`).
 
-## Clean up
+## Upgrade or clean up
+
+If you previously provisioned this sample's Azure OpenAI-based version into the
+same azd environment, incremental ARM deployment retains that unused Cognitive
+Services account. After the Document Intelligence workflow is deployed and
+verified, list the legacy account:
+
+```pwsh
+az cognitiveservices account list --resource-group "$(azd env get-value resourceGroupName)" --query "[?kind=='OpenAI'].name" -o tsv
+```
+
+If the command returns an account, confirm that no other application uses it,
+then delete the unused resource:
+
+```pwsh
+az cognitiveservices account delete --resource-group "$(azd env get-value resourceGroupName)" --name <legacy-openai-account-name>
+```
+
+To delete the complete sample environment instead:
 
 ```pwsh
 azd down --purge

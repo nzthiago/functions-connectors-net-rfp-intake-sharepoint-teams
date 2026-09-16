@@ -33,10 +33,23 @@ public class RfpDocumentAnalyzerIntegrationTests
             TestContext.Current.CancellationToken);
 
         Assert.Equal("Contoso Ltd.", result.Customer);
-        Assert.Contains("Azure AI", result.RequiredCapabilities);
-        Assert.Contains("Data Platform", result.RequiredCapabilities);
-        Assert.Contains("Identity & Security", result.RequiredCapabilities);
-        Assert.Contains("AI Specialist", result.RecommendedSmes);
-        Assert.Contains("Security Architect", result.RecommendedSmes);
+        Assert.Equal(
+            [
+                "Azure AI",
+                "Data Platform",
+                "Identity & Security",
+                "Integration & Automation",
+                "Observability & Operations",
+            ],
+            result.RequiredCapabilities);
+        Assert.Equal(
+            [
+                "AI Specialist",
+                "Data Platform Engineer",
+                "Security Architect",
+                "Integration Architect",
+                "Cloud Operations Specialist",
+            ],
+            result.RecommendedSmes);
     }
 }

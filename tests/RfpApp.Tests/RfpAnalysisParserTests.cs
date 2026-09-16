@@ -81,6 +81,56 @@ public class RfpAnalysisParserTests
     }
 
     [Fact]
+    public void Parse_DoesNotUseSectionHeadingForBlankCustomer()
+    {
+        const string content = """
+            Customer:
+
+            3. REQUIRED CAPABILITIES
+            3.1 Azure AI
+            """;
+
+        RfpAnalysis result = RfpAnalysisParser.Parse(content);
+
+        Assert.Equal("Unknown customer", result.Customer);
+        Assert.Equal(["Azure AI"], result.RequiredCapabilities);
+    }
+
+    [Fact]
+    public void Parse_StopsBlankCustomerAtNextField()
+    {
+        const string content = """
+            Customer:
+            Date: September 16, 2026
+            Organization: Fabrikam, Inc.
+
+            3. REQUIRED CAPABILITIES
+            3.1 Data Platform
+            """;
+
+        RfpAnalysis result = RfpAnalysisParser.Parse(content);
+
+        Assert.Equal("Fabrikam, Inc.", result.Customer);
+    }
+
+    [Fact]
+    public void Parse_IgnoresRequiredCapabilitiesInProse()
+    {
+        const string content = """
+            Customer: Contoso Ltd.
+            The following are required capabilities for this engagement.
+
+            3. REQUIRED CAPABILITIES
+            3.1 Integration & Automation
+            4. DELIVERABLES
+            """;
+
+        RfpAnalysis result = RfpAnalysisParser.Parse(content);
+
+        Assert.Equal(["Integration & Automation"], result.RequiredCapabilities);
+    }
+
+    [Fact]
     public void Parse_ReturnsSafeDefaultsForEmptyContent()
     {
         RfpAnalysis result = RfpAnalysisParser.Parse(null);

@@ -25,7 +25,7 @@ public sealed class RfpDocumentAnalyzer
             WaitUntil.Completed,
             LayoutModelId,
             BinaryData.FromBytes(document),
-            cancellationToken);
+            cancellationToken: cancellationToken);
 
         return RfpAnalysisParser.Parse(operation.Value.Content);
     }
@@ -81,7 +81,13 @@ public static partial class RfpAnalysisParser
 
                 for (int nextIndex = index + 1; nextIndex < lines.Count; nextIndex++)
                 {
-                    value = CleanValue(lines[nextIndex]);
+                    string nextLine = lines[nextIndex];
+                    if (IsFieldOrSectionBoundary(nextLine))
+                    {
+                        break;
+                    }
+
+                    value = CleanValue(nextLine);
                     if (!string.IsNullOrWhiteSpace(value))
                     {
                         return value;
@@ -100,17 +106,17 @@ public static partial class RfpAnalysisParser
 
         for (int index = 0; index < lines.Count; index++)
         {
-            if (!lines[index].Contains("REQUIRED CAPABILITIES", StringComparison.OrdinalIgnoreCase))
+            Match heading = MajorSectionRegex().Match(lines[index]);
+            if (!heading.Success ||
+                !heading.Groups["value"].Value.Contains(
+                    "REQUIRED CAPABILITIES",
+                    StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
 
             sectionStart = index;
-            Match heading = MajorSectionRegex().Match(lines[index]);
-            if (heading.Success)
-            {
-                _ = int.TryParse(heading.Groups["number"].Value, out sectionNumber);
-            }
+            _ = int.TryParse(heading.Groups["number"].Value, out sectionNumber);
 
             break;
         }
@@ -162,6 +168,13 @@ public static partial class RfpAnalysisParser
         return smes;
     }
 
+    private static bool IsFieldOrSectionBoundary(string line)
+    {
+        return CustomerLineRegex().IsMatch(line) ||
+            MajorSectionRegex().IsMatch(line) ||
+            FieldLineRegex().IsMatch(line);
+    }
+
     private static string CleanValue(string value)
     {
         return value
@@ -174,6 +187,11 @@ public static partial class RfpAnalysisParser
         @"^\s*(?:#{1,6}\s*)?(?:customer|client|organization)\s*[:\-]\s*(?<value>.*?)\s*$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex CustomerLineRegex();
+
+    [GeneratedRegex(
+        @"^\s*(?:#{1,6}\s*)?[A-Za-z][A-Za-z0-9 &/()_-]*\s*:\s*.*$",
+        RegexOptions.CultureInvariant)]
+    private static partial Regex FieldLineRegex();
 
     [GeneratedRegex(
         @"^\s*(?:#{1,6}\s*)?(?<number>\d+)\.\s+(?<value>.+?)\s*$",
