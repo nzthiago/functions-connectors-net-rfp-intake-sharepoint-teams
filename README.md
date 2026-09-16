@@ -13,34 +13,6 @@ uses two connections, SharePoint Online and Microsoft Teams, created in an
 [Azure Connector Namespace](https://learn.microsoft.com/azure/connector-namespace/connector-namespace-overview),
 and leverages the function app's managed identity for authentication.
 
-## End-to-end flow
-
-```mermaid
-flowchart LR
-    A["📄 RFP uploaded to SharePoint"]
-    A -->|"Trigger: When a file is created (properties only)"| B
-
-    subgraph FA["Function App"]
-      B["OnNewFile function"]
-    end
-
-    subgraph CN["Connector Namespace"]
-      direction TB
-      SP["sharepointonline connection"]
-      TM["teams connection"]
-    end
-
-    B -->|"Get file content"| SP
-    SP -->|"RFP bytes"| B
-    B -->|"Analyze document"| C["Azure Document Intelligence<br/>prebuilt-layout"]
-    C -->|"Extracted text and layout"| B
-    B -->|"Apply capability and SME routing rules"| B
-    B -->|"Post Adaptive Card"| TM
-    TM --> E["💬 Teams channel<br/>New RFP card"]
-```
-
-### Architecture
-
 ![Architecture diagram](docs/images/architecture.svg)
 
 ## Prerequisites
@@ -325,51 +297,6 @@ the Bicep deployment:
   both connection authorizations. `azd deploy` runs the platform-specific
   script through the `postdeploy` hook, replacing any local callback with the
   deployed Function App callback.
-
-## Project layout
-
-```text
-functions-connectors-net-rfp-intake-sharepoint-teams/
-├── .vscode/
-│   ├── extensions.json
-│   ├── launch.json
-│   ├── settings.json
-│   └── tasks.json
-├── Program.cs
-├── RfpDocumentAnalyzer.cs
-├── RfpFunctions.cs
-├── SharePointFileContent.cs
-├── azure.yaml
-├── docs/
-│   └── images/
-│       └── architecture.svg
-├── host.json
-├── local.settings.json
-├── rfpApp.csproj
-├── sample-data/
-│   └── contoso-rfp.pdf
-├── tests/
-│   └── RfpApp.Tests/
-│       ├── RfpAnalysisParserTests.cs
-│       ├── RfpDocumentAnalyzerIntegrationTests.cs
-│       ├── SharePointFileContentTests.cs
-│       └── RfpApp.Tests.csproj
-└── infra/
-    ├── abbreviations.json
-    ├── bicepconfig.json
-    ├── connectorNamespace.bicep
-    ├── main.bicep
-    ├── main.json
-    ├── main.parameters.json
-    ├── documentIntelligence.bicep
-    └── scripts/
-        ├── authorize-connections.ps1
-        ├── authorize-connections.sh
-        ├── configure-trigger.ps1
-        ├── configure-trigger.sh
-        ├── postdeploy.ps1
-        └── postdeploy.sh
-```
 
 ## Troubleshooting
 
