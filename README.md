@@ -173,11 +173,11 @@ Local execution still uses the connector connections and Content Understanding
 resource provisioned in Azure. If you haven't run `azd up`, run `azd provision`
 and complete both connector consent flows first.
 
-1. The post-provision hook creates `local.settings.json` from
-   `local.settings.example.json` and fills in the connector runtime URLs,
-   SharePoint site, Teams destination, and Content Understanding endpoint. It
-   leaves `AZURE_CLIENT_ID` empty so `DefaultAzureCredential` uses your local
-   Azure sign-in instead of the Function App's managed identity.
+1. The post-provision hook creates `local.settings.json` from the current azd
+   deployment outputs, filling in the connector runtime URLs, SharePoint site,
+   Teams destination, and Content Understanding endpoint. It leaves
+   `AZURE_CLIENT_ID` empty so `DefaultAzureCredential` uses your local Azure
+   sign-in instead of the Function App's managed identity.
 
    To regenerate the file after changing environments or provisioning values,
    run:
@@ -309,8 +309,8 @@ the Bicep deployment:
   Connections that are already authenticated are skipped. This script is
   needed because Bicep creates the connections, but a user must grant consent.
 - **`createlocalsettings.ps1` / `.sh`:** Generates the ignored
-  `local.settings.json` file from the committed example and the current azd
-  deployment outputs. It preserves an existing file unless explicitly forced.
+  `local.settings.json` file from the current azd deployment outputs. It
+  preserves an existing file unless explicitly forced.
 - **`postprovision.ps1` / `.sh`:** Runs connector authorization and local
   settings generation. `azd provision` invokes this platform-specific script
   through the `postprovision` hook.

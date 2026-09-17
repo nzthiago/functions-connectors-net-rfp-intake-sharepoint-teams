@@ -12,7 +12,6 @@ fi
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repo_root=$(CDPATH= cd -- "$script_dir/../.." && pwd)
-template_path="$repo_root/local.settings.example.json"
 settings_path="$repo_root/local.settings.json"
 temp_path="$settings_path.tmp"
 
@@ -38,7 +37,7 @@ fi
 
 trap 'rm -f "$temp_path"' EXIT
 
-jq \
+jq -n \
     --arg sharepoint_runtime_url "$sharepoint_runtime_url" \
     --arg sharepoint_site_url "$sharepoint_site_url" \
     --arg teams_runtime_url "$teams_runtime_url" \
@@ -46,15 +45,23 @@ jq \
     --arg teams_channel_id "$teams_channel_id" \
     --arg content_understanding_endpoint "$content_understanding_endpoint" \
     '
-      .Values.AZURE_CLIENT_ID = ""
-      | .Values.SHAREPOINTONLINE_CONNECTION_RUNTIME_URL = $sharepoint_runtime_url
-      | .Values.SHAREPOINT_SITE_URL = $sharepoint_site_url
-      | .Values.TEAMS_CONNECTION_RUNTIME_URL = $teams_runtime_url
-      | .Values.TEAMS_TEAM_ID = $teams_team_id
-      | .Values.TEAMS_CHANNEL_ID = $teams_channel_id
-      | .Values.CONTENT_UNDERSTANDING_ENDPOINT = $content_understanding_endpoint
-    ' \
-    "$template_path" > "$temp_path"
+      {
+        IsEncrypted: false,
+        Values: {
+          AzureWebJobsStorage: "UseDevelopmentStorage=true",
+          FUNCTIONS_WORKER_RUNTIME: "dotnet-isolated",
+          AZURE_CLIENT_ID: "",
+          SHAREPOINTONLINE_CONNECTION_RUNTIME_URL: $sharepoint_runtime_url,
+          SHAREPOINT_SITE_URL: $sharepoint_site_url,
+          TEAMS_CONNECTION_RUNTIME_URL: $teams_runtime_url,
+          TEAMS_TEAM_ID: $teams_team_id,
+          TEAMS_CHANNEL_ID: $teams_channel_id,
+          TEAMS_POST_AS: "Flow bot",
+          TEAMS_POST_IN: "Channel",
+          CONTENT_UNDERSTANDING_ENDPOINT: $content_understanding_endpoint
+        }
+      }
+    ' > "$temp_path"
 
 mv "$temp_path" "$settings_path"
 trap - EXIT
