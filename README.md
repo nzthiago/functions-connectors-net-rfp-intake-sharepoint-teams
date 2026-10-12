@@ -173,6 +173,27 @@ Local execution still uses the connector connections and Content Understanding
 resource provisioned in Azure. If you haven't run `azd up`, run `azd provision`
 and complete both connector consent flows first.
 
+### Poll delivery (private preview)
+
+The repository uses
+`Microsoft.Azure.Functions.Worker.Extensions.Connector` `0.3.0-alpha` from the
+`ConnectorExtension_PublicPackages` feed. `OnNewFilePoll` uses host-pull Poll
+delivery alongside the existing `OnNewFile` Webhook function:
+
+```csharp
+[ConnectorTrigger(
+    DeliveryMode = ConnectorTriggerDeliveryMode.Poll,
+    Connection = "ConnectorNamespace",
+    TriggerConfigName = "%OnNewFilePollTriggerConfigName%",
+    Concurrency = 1)]
+ConnectorEvent<SharePointOnlineOnNewFileItemsTriggerPayload> connectorEvent
+```
+
+Poll delivery does not require a callback URL, Function system key, public
+port, or dev tunnel. The local identity calls the Connector Namespace Poll
+runtime directly. Its SharePoint connection access policy must authorize the
+signed-in developer.
+
 1. The post-provision hook creates `local.settings.json` from the current azd
    deployment outputs, filling in the connector runtime URLs, SharePoint site,
    Teams destination, and Content Understanding endpoint. It leaves
@@ -198,53 +219,64 @@ and complete both connector consent flows first.
    azurite --silent --location ~/.azurite/connectors-sample
    ```
 
-3. Start the app with authentication enabled:
+   Alternatively, use the provisioned storage account with your signed-in
+   developer identity by replacing `AzureWebJobsStorage` with:
 
-   ```pwsh
-   func start --enableAuth
+   ```json
+   {
+     "AzureWebJobsStorage__accountName": "<storage-account-name>"
+   }
    ```
 
-   Always use `--enableAuth` when exposing the app through a dev tunnel.
-   Without it, the function endpoint is unauthenticated on the public internet.
+   The provisioning identity already has the required blob, queue, and table
+   data roles.
 
-4. In VS Code, open the **Ports** view, select **Forward a Port**, and enter
-   `7071`.
-5. Copy the generated **Forwarded Address**, such as
-   `https://<id>-7071.uks1.devtunnels.ms`. Right-click port `7071`, select
-   **Port Visibility → Public**, and confirm the warning.
-6. Point the SharePoint trigger to the local Function host.
+3. Add the Poll Trigger Config values returned by Connector Namespace to the
+   ignored `local.settings.json`:
 
-   On macOS or Linux:
-
-   ```sh
-   sh ./infra/scripts/configure-trigger.sh \
-     --target local \
-     --callback-base-url "https://<id>-7071.uks1.devtunnels.ms"
+   ```json
+   {
+     "ConnectorNamespace__pollingEndpoint": "https://<host>/api/connectorGateways/<gateway-id>",
+     "OnNewFilePollTriggerConfigName": "<poll-trigger-config-name>"
+   }
    ```
 
-   On Windows:
+   Derive `ConnectorNamespace__pollingEndpoint` from the service-generated
+   `pollingEndpoints.receiveUri` by removing only the final
+   `/triggerConfigs/<name>/receive` path. Preserve the generated host and
+   gateway ID exactly. Do not commit either value.
 
-   ```powershell
-   pwsh ./infra/scripts/configure-trigger.ps1 `
-     -Target Local `
-     -CallbackBaseUrl "https://<id>-7071.uks1.devtunnels.ms"
-   ```
+4. In VS Code, set a breakpoint in `OnNewFilePoll` or
+   `ProcessNewFilesAsync`, then press **F5** and select the .NET Functions
+   worker process when prompted. The launch configuration follows the standard
+   Azure Functions isolated-worker attach flow.
 
-7. Upload a newly named copy of `sample-data/contoso-rfp.pdf` to SharePoint.
-   The trigger polls every five minutes and sends the callback through the
-   public dev tunnel. Rerun the configuration command whenever the forwarded
-   address changes.
+5. Upload a newly named copy of `sample-data/contoso-rfp.pdf` to SharePoint.
+   Connector Namespace leases the event to the local host. Continuing from the
+   breakpoint fetches the file, analyzes it, and posts the Teams card.
 
-To return the trigger to the deployed Function App, run `azd deploy`. The
-`postdeploy` hook recreates the trigger with the Azure callback URL.
+The existing Webhook Trigger Config remains enabled for the deployed
+`OnNewFile` function. During side-by-side testing, one upload can therefore
+produce both the deployed Webhook result and the local Poll result. Disable one
+Trigger Config temporarily if the demonstration must produce exactly one Teams
+card.
+
+### Webhook delivery through a dev tunnel
+
+The existing `configure-trigger.ps1` and `configure-trigger.sh` scripts still
+support pointing the Webhook Trigger Config at a local public dev tunnel. This
+mode requires `func start --enableAuth`, port forwarding, and the
+`connector_extension` system key. Poll delivery is preferred for local
+host-pull testing because it requires none of those callback surfaces.
 
 ## How the workflow works
 
 1. **RFP arrives.** A file is uploaded to the monitored SharePoint document
    library.
-2. **Trigger.** The Connector Namespace polls the SharePoint **"When a file
-   is created"** trigger (`GetOnNewFileItems`) and calls the function's
-   `OnNewFile` callback. The trigger returns properties only, so the content
+2. **Trigger.** The Connector Namespace runs the SharePoint **"When a file is
+   created"** operation (`GetOnNewFileItems`). It either calls the deployed
+   `OnNewFile` Webhook callback or leases the event to the local
+   `OnNewFilePoll` host. The trigger returns properties only, so the content
    must be fetched separately.
 3. **Fetch content.** The function calls the SharePoint **"Get file content"**
    action (`SharePointOnlineClient.GetFileContentAsync`) with the file
@@ -295,9 +327,11 @@ azd down --purge
   to export OpenTelemetry. Local authentication is disabled on the Application
   Insights and Microsoft Foundry resources.
 - **Connector Namespace system managed identity:** Polls the SharePoint
-  trigger and delivers callbacks.
+  connector operation.
+- **Local developer identity:** Calls the Poll runtime and the SharePoint and
+  Teams connection runtime URLs. It requires a connection-level access policy.
 - **Callback authorization:** Uses the `connector_extension` system key on the
-  callback URL. This sample does not use App Service built-in authentication.
+  Webhook callback URL. Poll delivery does not use callback authorization.
 
 ## Deployment scripts
 
@@ -315,10 +349,10 @@ the Bicep deployment:
   settings generation. `azd provision` invokes this platform-specific script
   through the `postprovision` hook.
 - **`configure-trigger.ps1` / `.sh`:** Creates the SharePoint new-file trigger
-  and points it to a local dev tunnel or the deployed Function App. It adds the
-  `connector_extension` system key to the callback URL. This script runs after
-  the function is available because the callback URL and key are not known
-  earlier. Changing targets requires the trigger to be deleted and recreated.
+  for Webhook delivery and points it to a local dev tunnel or the deployed
+  Function App. It adds the `connector_extension` system key to the callback
+  URL. Poll Trigger Configs are separate ARM resources and do not use this
+  script.
 - **`postdeploy.ps1` / `.sh`:** Configures the trigger for Azure and checks
   both connection authorizations. `azd deploy` runs the platform-specific
   script through the `postdeploy` hook, replacing any local callback with the
@@ -329,6 +363,12 @@ the Bicep deployment:
 If the summary card is not posted to the specified Teams channel, check the
 following:
 
+- For Poll delivery, verify that the Trigger Config has `deliveryMode: Poll`,
+  is enabled, and that `ConnectorNamespace__pollingEndpoint` and
+  `OnNewFilePollTriggerConfigName` resolve in `local.settings.json`.
+- Confirm that both the Connector Namespace identity and the signed-in local
+  developer have connection-level access policies on the SharePoint
+  connection.
 - In the Connector Namespace portal, verify that the SharePoint trigger's
   callback URL points to the intended local dev tunnel or deployed Function App
   and includes the correct `connector_extension` access key.

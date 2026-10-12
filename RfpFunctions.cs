@@ -44,6 +44,30 @@ public class RfpFunctions
         [ConnectorTrigger] SharePointOnlineOnNewFileItemsTriggerPayload payload,
         CancellationToken cancellationToken)
     {
+        await ProcessNewFilesAsync(payload, cancellationToken);
+    }
+
+    [Function("OnNewFilePoll")]
+    public async Task OnNewFilePoll(
+        [ConnectorTrigger(
+            DeliveryMode = ConnectorTriggerDeliveryMode.Poll,
+            Connection = "ConnectorNamespace",
+            TriggerConfigName = "%OnNewFilePollTriggerConfigName%",
+            Concurrency = 1)]
+        ConnectorEvent<SharePointOnlineOnNewFileItemsTriggerPayload> connectorEvent,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation(
+            "Poll trigger message {MessageId} received.",
+            connectorEvent.MessageId);
+
+        await ProcessNewFilesAsync(connectorEvent.Data, cancellationToken);
+    }
+
+    private async Task ProcessNewFilesAsync(
+        SharePointOnlineOnNewFileItemsTriggerPayload payload,
+        CancellationToken cancellationToken)
+    {
         var items = payload.Body?.Value;
         if (items is null || items.Count == 0)
         {
